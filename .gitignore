@@ -1,0 +1,3 @@
+# Archivos y carpetas sensibles
+node_modules/
+.env
