@@ -9,7 +9,6 @@ El sistema maneja dos roles principales:
 
 Incluye autenticación segura, encriptación de contraseñas, sesiones con cookies httpOnly y envío de notificaciones.  
 
-
 🛠️Tecnologías utilizadas
 -Node.js  
 -Express (Framework para APIs REST)  
