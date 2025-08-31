@@ -54,7 +54,7 @@ http://localhost:5000
 
 ```
 
-## ✨Rutas principales
+## ✨Endpoints principales
 - Usuarios: `/api/users`
 - Productos: `/api/products`
 - Ventas: `/api/sales`
