@@ -4,7 +4,7 @@
 Este es el **backend** del sistema POS Gamer, que provee las **APIs necesarias** para la gestión de inventario, ventas, usuarios y reportes.  
 
 El sistema maneja **dos roles principales**:  
-- **Administrador:** gestiona productos, ventas, usuarios y reportes.  
+- **Administrador (Admin):** gestiona productos, ventas, usuarios y reportes.  
 - **Vendedor (Seller):** gestiona ventas e inventario limitado.  
 
 Incluye **autenticación segura, encriptación de contraseñas, sesiones con cookies httpOnly** y envío de notificaciones.  
