@@ -32,7 +32,7 @@ git clone https://github.com/EdannyDev/backend-pos.git
 npm install
 
 # 3. Configuración de variables de entorno
-Crea un archivo **.env** en la raíz del proyecto con las siguientes variables:
+Crea un archivo .env en la raíz del proyecto con las siguientes variables:
 
 PORT=5000
 NODE_ENV=development
@@ -55,11 +55,10 @@ http://localhost:5000
 ```
 
 ## ✨Rutas principales
-
-* **Usuarios:** `/api/users`
-* **Productos:** `/api/products`
-* **Ventas:** `/api/sales`
-* **Reportes:** `/api/reports`
+- Usuarios: `/api/users`
+- Productos: `/api/products`
+- Ventas: `/api/sales`
+- Reportes: `/api/reports`
 
 ## 🔗Enlaces útiles
 
