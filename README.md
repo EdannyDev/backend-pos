@@ -61,5 +61,4 @@ http://localhost:5000
 - Reportes: `/api/reports`
 
 ## 🔗Enlaces útiles
-
 Frontend: https://github.com/EdannyDev/pos-app
