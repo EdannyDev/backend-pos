@@ -81,6 +81,45 @@ router.post('/login', validateLogin, handleValidation, async (req, res) => {
   }
 });
 
+// Login Demo
+router.post('/demo-login', async (req, res) => {
+  try {
+    const { role } = req.body;
+
+    if (!['admin', 'seller'].includes(role)) {
+      return res.status(400).json({ msg: 'Rol demo inválido' });
+    }
+
+    const demoEmail = role === 'admin'
+      ? 'demo_admin@pos.io'
+      : 'demo_seller@pos.io';
+
+    const user = await User.findOne({ email: demoEmail });
+
+    if (!user) {
+      return res.status(404).json({ msg: 'Usuario demo no encontrado' });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role, demo: true },
+      process.env.JWT_SECRET,
+      { expiresIn: '2h' }
+    );
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+      maxAge: 2 * 60 * 60 * 1000,
+      path: '/',
+    });
+
+    res.json({ role: user.role, name: user.name, demo: true });
+  } catch (err) {
+    res.status(500).json({ msg: 'Error en demo login', error: err.message });
+  }
+});
+
 // Cerrar sesión
 router.post('/logout', (req, res) => {
   res.clearCookie('token', {
