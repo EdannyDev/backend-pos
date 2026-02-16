@@ -1,64 +1,83 @@
-# 🕹️POS Gamer - Backend  
+# 🕹️ POS Gamer – Backend API
 
-## 📌Descripción  
-Este es el **backend** del sistema POS Gamer, que provee las **APIs necesarias** para la gestión de inventario, ventas, usuarios y reportes.  
+## 📌 Overview
 
-El sistema maneja **dos roles principales**:  
-- **Administrador (Admin):** gestiona productos, ventas, usuarios y reportes.  
-- **Vendedor (Seller):** gestiona ventas e inventario limitado.  
+POS Gamer Backend is a RESTful API designed for a technology retail store Point of Sale system.
 
-Incluye **autenticación segura, encriptación de contraseñas, sesiones con cookies httpOnly** y envío de notificaciones.  
+It manages authentication, inventory, sales processing and reporting while enforcing role-based access control and secure session handling.
 
-## 🛠️Tecnologías utilizadas  
+This project focuses on backend architecture, security practices and scalable API design.
 
-- **Node.js**  
-- **Express** (Framework para APIs REST)  
-- **MongoDB / Mongoose** (Base de datos NoSQL y modelado de datos)  
-- **JWT** (Autenticación segura)  
-- **bcryptjs** (Encriptación de contraseñas)  
-- **cookie-parser** (Manejo de sesiones con cookies httpOnly)  
-- **crypto** (Tokens y seguridad)  
-- **dotenv** (Variables de entorno)  
-- **CORS** (Control de orígenes)  
-- **Nodemailer + Google APIs** (Envío de correos electrónicos)  
+## 🏗 Architecture
 
-## ⚙️Instalación y ejecución  
+The application follows a layered structure:
+
+- **Routes** → Define API endpoints + Handle request/response logic
+- **Models** → MongoDB schemas using Mongoose
+- **Middlewares** → Authentication & role validation
+
+This separation ensures maintainability and scalability.
+
+## 🔐 Authentication & Security
+
+Security was a primary focus during development.
+
+- Password hashing using `bcryptjs`
+- JWT-based authentication
+- Tokens stored in **HttpOnly cookies** to prevent XSS attacks
+- Role-based authorization middleware
+- Environment-based configuration using `dotenv`
+- Controlled CORS setup
+
+Session handling is implemented using secure cookie strategies instead of storing tokens in localStorage.
+
+## 👥 Role-Based Access Control (RBAC)
+
+The system includes two roles:
+
+### Admin
+- Manage users
+- Manage inventory
+- View reports and metrics
+- Access full system control
+
+### Seller
+- Register sales
+- View limited inventory
+- Access sales module
+
+Access restrictions are enforced through middleware validation.
+
+## 📦 Core Modules
+
+- Users Management
+- Products & Inventory
+- Sales Processing
+- Reports & Metrics
+- Email Notifications (Nodemailer + Google OAuth2)
+
+## 🛠 Tech Stack
+
+`Node.js` · `Express` · `MongoDB` · `Mongoose`
+
+`JWT` · `bcryptjs` · `cookie-parser`
+
+`Nodemailer` · `Google APIs`
+
+## ⚙️ Local Setup
 
 ```bash
-# 1. Clonar el repositorio
 git clone https://github.com/EdannyDev/backend-pos.git
-
-# 2. Instalar dependencias
 npm install
-
-# 3. Configuración de variables de entorno
-Crea un archivo .env en la raíz del proyecto con las siguientes variables:
-
-PORT=5000
-NODE_ENV=development
-MONGO_URI=mongodb://localhost:27017/posDB
-JWT_SECRET=your_jwt_secret_here
-GMAIL_USER=your_email_here
-GMAIL_CLIENT_ID=your_client_id_here
-GMAIL_CLIENT_SECRET=your_client_secret_here
-GMAIL_REFRESH_TOKEN=your_refresh_token_here
-GMAIL_REDIRECT_URI=https://developers.google.com/oauthplayground
-
-Reemplaza los valores por los reales correspondientes.
-
-# 4. Ejecutar la aplicación
-npm start
-
-# 5. La API estará disponible en:
-http://localhost:5000
-
+node server.js
 ```
 
-## ✨Endpoints principales
-- Usuarios: `/api/users`
-- Productos: `/api/products`
-- Ventas: `/api/sales`
-- Reportes: `/api/reports`
-
-## 🔗Enlaces útiles
-Frontend: https://github.com/EdannyDev/frontend-pos
+## 🧾 Environment Variables
+```bash
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/posDB
+JWT_SECRET=tu_secreto_jwt
+GMAIL_CLIENT_ID=tu_client_id_google
+GMAIL_CLIENT_SECRET=tu_client_secret_google
+GMAIL_REFRESH_TOKEN=tu_refresh_token_google
+```
