@@ -76,8 +76,8 @@ node server.js
 ```bash
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/posDB
-JWT_SECRET=tu_secreto_jwt
-GMAIL_CLIENT_ID=tu_client_id_google
-GMAIL_CLIENT_SECRET=tu_client_secret_google
-GMAIL_REFRESH_TOKEN=tu_refresh_token_google
+JWT_SECRET=your_secret_jwt
+GMAIL_CLIENT_ID=your_client_id_google
+GMAIL_CLIENT_SECRET=your_client_secret_google
+GMAIL_REFRESH_TOKEN=your_refresh_token_google
 ```
