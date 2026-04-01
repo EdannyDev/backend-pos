@@ -1,83 +1,124 @@
-# 🕹️ POS Gamer – Backend API
+🕹️ POS Gamer – Backend API
 
 ## 📌 Overview
+Backend API for a Point of Sale (POS) system focused on inventory management, sales processing, and user roles.
 
-POS Gamer Backend is a RESTful API designed for a technology retail store Point of Sale system.
+The project simulates a real-world scenario where multiple users register sales, inventory needs to stay consistent, and basic business metrics are required.
 
-It manages authentication, inventory, sales processing and reporting while enforcing role-based access control and secure session handling.
-
-This project focuses on backend architecture, security practices and scalable API design.
+---
 
 ## 🏗 Architecture
+The project is organized in a modular way:
 
-The application follows a layered structure:
+- **Routes** → API endpoints
+- **Controllers** → Request handling and business logic
+- **Models** → MongoDB schemas (Mongoose)
+- **Middlewares** → Authentication, role validation and input validation
 
-- **Routes** → Define API endpoints + Handle request/response logic
-- **Models** → MongoDB schemas using Mongoose
-- **Middlewares** → Authentication & role validation
+This structure keeps responsibilities separated and makes the project easier to maintain.
 
-This separation ensures maintainability and scalability.
+---
 
 ## 🔐 Authentication & Security
 
-Security was a primary focus during development.
-
-- Password hashing using `bcryptjs`
 - JWT-based authentication
-- Tokens stored in **HttpOnly cookies** to prevent XSS attacks
-- Role-based authorization middleware
-- Environment-based configuration using `dotenv`
-- Controlled CORS setup
+- Tokens stored in **HttpOnly cookies** (not localStorage)
+- Password hashing using bcrypt
+- Role-based access control (RBAC)
+- Input validation using express-validator
+- Environment configuration with dotenv
 
-Session handling is implemented using secure cookie strategies instead of storing tokens in localStorage.
+---
 
-## 👥 Role-Based Access Control (RBAC)
+## 👥 Roles
 
-The system includes two roles:
+Two roles are implemented:
 
-### Admin
-- Manage users
-- Manage inventory
-- View reports and metrics
-- Access full system control
+- **Admin**
+  - Manage users
+  - Manage inventory
+  - Access reports
 
-### Seller
-- Register sales
-- View limited inventory
-- Access sales module
+- **Seller**
+  - Register sales
+  - Limited system access
 
-Access restrictions are enforced through middleware validation.
+Access is enforced through middleware.
 
-## 📦 Core Modules
+---
 
-- Users Management
-- Products & Inventory
-- Sales Processing
-- Reports & Metrics
-- Email Notifications (Nodemailer + Google OAuth2)
+## ⚔️ Challenges & Solutions
+
+### Preventing sales without stock
+Before creating a sale, the system validates that each product has enough available stock.
+
+---
+
+### Keeping inventory consistent
+After a sale is created:
+- Stock is reduced automatically  
+- If a sale is updated or deleted, stock is restored  
+
+This helps keep inventory accurate over time.
+
+---
+
+### Avoiding duplicate sales
+To prevent accidental duplicates, the system checks if the same user tries to create an identical sale within a short time window (~5 minutes).
+
+---
+
+### Low stock alerts
+After each operation, products with low stock (≤ 5 units) are detected and flagged.
+
+---
+
+### Reports & metrics
+MongoDB aggregation pipelines are used to generate:
+
+- Sales over time
+- Sales by user
+- Top-selling products
+- Total revenue
+
+---
+
+## 🧠 Technical Decisions
+
+- **MongoDB**
+  Flexible structure for handling sales with multiple products.
+
+- **JWT in HttpOnly cookies**
+  Helps reduce XSS risks compared to storing tokens in localStorage.
+
+- **Modular structure**
+  Makes the code easier to extend and maintain.
+
+---
+
+## 📦 Core Features
+
+- Authentication & authorization
+- User management
+- Inventory management
+- Sales processing
+- Reports & metrics
+- Low stock alerts
+- Password recovery via email
+
+---
 
 ## 🛠 Tech Stack
 
-`Node.js` · `Express` · `MongoDB` · `Mongoose`
+Node.js · Express · MongoDB · Mongoose  
+JWT · bcryptjs · cookie-parser  
+Nodemailer · Google OAuth2  
 
-`JWT` · `bcryptjs` · `cookie-parser`
-
-`Nodemailer` · `Google APIs`
+---
 
 ## ⚙️ Local Setup
 
 ```bash
 git clone https://github.com/EdannyDev/backend-pos.git
 npm install
-node server.js
-```
-
-## 🧾 Environment Variables
-```bash
-PORT=5000
-MONGO_URI=mongodb://localhost:27017/posDB
-JWT_SECRET=your_secret_jwt
-GMAIL_CLIENT_ID=your_client_id_google
-GMAIL_CLIENT_SECRET=your_client_secret_google
-GMAIL_REFRESH_TOKEN=your_refresh_token_google
-```
+npm run dev
