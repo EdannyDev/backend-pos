@@ -30,7 +30,7 @@ app.use('/api/reports', reportsRoutes);
 
 // Ruta de bienvenida
 app.get('/', (req, res) => {
-  res.send('Bienvenido al servidor backend');
+  res.json({ msg: 'Bienvenido al backend del POS' });
 });
 
 const PORT = process.env.PORT || 5000;

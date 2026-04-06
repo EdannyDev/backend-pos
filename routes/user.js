@@ -1,14 +1,14 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-const { sendRecoveryEmail } = require('../utils/mailer');
+const { sendResetEmail } = require('../utils/resendMailer');
 const { verifyToken, isAdmin } = require('../middlewares/auth');
 const { 
   validateRegister, 
   validateLogin, 
-  validateTempPassword,
   validateUserUpdate, 
   validateUpdateProfile, 
   handleValidation 
@@ -23,9 +23,8 @@ router.post('/register', validateRegister, handleValidation, async (req, res) =>
     if (existingUser) return res.status(400).json({ msg: 'El usuario ya existe' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const role = email.endsWith('@pos.io') ? 'admin' : 'seller';
 
-    const newUser = new User({ name, email, password: hashedPassword, role });
+    const newUser = new User({ name, email, password: hashedPassword });
     await newUser.save();
 
     res.status(201).json({ msg: 'Usuario registrado correctamente', role: newUser.role });
@@ -43,25 +42,7 @@ router.post('/login', validateLogin, handleValidation, async (req, res) => {
     if (!user) return res.status(400).json({ msg: 'Credenciales inválidas' });
 
     let isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch && user.resetPassword && user.resetPasswordExpires) {
-      const now = Date.now();
-      if (now < user.resetPasswordExpires.getTime()) {
-        isMatch = await bcrypt.compare(password, user.resetPassword);
-      } else {
-        user.resetPassword = null;
-        user.resetPasswordExpires = null;
-        await user.save();
-      }
-    }
-
     if (!isMatch) return res.status(400).json({ msg: 'Credenciales inválidas' });
-
-    if (user.resetPassword) {
-      user.resetPassword = null;
-      user.resetPasswordExpires = null;
-      await user.save();
-    }
 
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: '1d',
@@ -131,55 +112,79 @@ router.post('/logout', (req, res) => {
   res.json({ msg: 'Sesión cerrada correctamente' });
 });
 
-// Generar contraseña temporal
-router.post('/temp-password', validateTempPassword, handleValidation, async (req, res) => {
+// Contraseña olvidada
+router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
-
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ msg: 'Usuario no encontrado' });
 
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    if (!user) {
+      return res.json({
+        msg: 'Si el correo existe, se enviaron instrucciones'
+      });
+    }
+    const resetToken = crypto.randomBytes(32).toString('hex');
 
-    user.resetPassword = tempPasswordHash;
-    user.resetPasswordExpires = expiresAt;
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    user.passwordToken = hashedToken;
+    user.passwordExpires = Date.now() + 15 * 60 * 1000;
     await user.save();
 
-    if (user.role === 'admin') {
-      return res.json({
-        msg: 'Contraseña temporal generada',
-        tempPassword,
-        nota: 'Recuerda que solo es válida por 5 minutos'
-      });
-    }
+    const resetUrl = `${process.env.FRONTEND_URL}/resetPassword?token=${resetToken}`;
+      await sendResetEmail({
+      to: user.email,
+      name: user.name,
+      resetUrl
+    });
 
-    try {
-      await sendRecoveryEmail({
-        to: user.email,
-        name: user.name,
-        tempPassword
-      });
-    } catch (mailError) {
-      if (mailError.message.includes('invalid_grant')) {
-        return res.status(500).json({
-          msg: 'Error en el envío de correo. Contacta al administrador.'
-        });
-      }
-      throw mailError;
-    }
+    res.json({
+      msg: 'Si el correo existe, se enviaron instrucciones'
+    });
 
-    res.json({ msg: 'Correo enviado con la contraseña temporal' });
   } catch (err) {
-    res.status(500).json({ msg: 'Error al recuperar contraseña', error: err.message });
+    res.status(500).json({ msg: 'Error del servidor', error: err.message });
+  }
+});
+
+// Restablecer contraseña
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    const user = await User.findOne({
+      passwordToken: hashedToken,
+      passwordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ msg: 'Token inválido o expirado' });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    user.password = hashedPassword;
+    user.passwordToken = null;
+    user.passwordExpires = null;
+    await user.save();
+
+    res.json({ msg: 'Contraseña actualizada correctamente' });
+  } catch (err) {
+    res.status(500).json({ msg: 'Error del servidor', error: err.message });
   }
 });
 
 // Obtener todos los usuarios (solo admin y excepto a sí mismo)
 router.get('/list', verifyToken, isAdmin, async (req, res) => {
   try {
-    const users = await User.find({ _id: { $ne: req.user.id } }).select('-password -resetPassword -resetPasswordExpires');
+    const users = await User.find({ _id: { $ne: req.user.id } }).select('-password -passwordToken -passwordExpires');
     res.json(users);
   } catch (err) {
     res.status(500).json({ msg: 'Error al obtener usuarios', error: err.message });
@@ -193,7 +198,7 @@ router.get('/list/:id', verifyToken, isAdmin, async (req, res) => {
       return res.status(403).json({ msg: 'No puedes acceder a tu propia cuenta desde esta ruta' });
     }
 
-    const user = await User.findById(req.params.id).select('-password -resetPassword -resetPasswordExpires');
+    const user = await User.findById(req.params.id).select('-password -passwordToken -passwordExpires');
     if (!user) return res.status(404).json({ msg: 'Usuario no encontrado' });
 
     res.json(user);
@@ -209,7 +214,7 @@ router.put('/update/:id', validateUserUpdate, handleValidation, verifyToken, isA
       return res.status(403).json({ msg: 'No puedes actualizar tu propia cuenta desde esta ruta' });
     }
 
-    if ('password' in req.body || 'resetPassword' in req.body || 'resetPasswordExpires' in req.body) {
+    if ('password' in req.body || 'passwordToken' in req.body || 'passwordExpires' in req.body) {
       return res.status(400).json({ msg: 'No está permitido modificar la contraseña desde esta ruta' });
     }
 
@@ -249,7 +254,7 @@ router.delete('/delete/:id', verifyToken, isAdmin, async (req, res) => {
 // Obtener perfil del usuario autenticado (sin parámetro)
 router.get('/me', verifyToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password -resetPassword -resetPasswordExpires');
+    const user = await User.findById(req.user.id).select('-password -passwordToken -passwordExpires');
     if (!user) return res.status(404).json({ msg: 'Usuario no encontrado' });
 
     res.json(user);
@@ -265,7 +270,7 @@ router.get('/profile/:id', verifyToken, async (req, res) => {
       return res.status(403).json({ msg: 'No puedes acceder al perfil de otro usuario' });
     }
 
-    const user = await User.findById(req.user.id).select('-password -resetPassword -resetPasswordExpires');
+    const user = await User.findById(req.user.id).select('-password -passwordToken -passwordExpires');
     if (!user) return res.status(404).json({ msg: 'Usuario no encontrado' });
 
     res.json(user);

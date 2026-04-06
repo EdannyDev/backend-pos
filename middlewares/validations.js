@@ -16,10 +16,6 @@ const validateLogin = [
   body('password').notEmpty().withMessage('La contraseña es requerida'),
 ];
 
-const validateTempPassword = [
-  body('email').isEmail().withMessage('Email inválido'),
-];
-
 const validateUserUpdate = [
   body('name').optional().trim().notEmpty().withMessage('El nombre no puede estar vacío'),
   body('email').optional().isEmail().withMessage('Email inválido'),
@@ -88,7 +84,6 @@ const handleValidation = (req, res, next) => {
 module.exports = {
   validateRegister,
   validateLogin,
-  validateTempPassword,
   validateUserUpdate,
   validateUpdateProfile,
   validateCreateProduct,
