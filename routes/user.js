@@ -62,7 +62,7 @@ router.post('/login', validateLogin, handleValidation, async (req, res) => {
   }
 });
 
-// Login Demo
+// Modo Demo
 router.post('/demo-login', async (req, res) => {
   try {
     const { role } = req.body;
@@ -71,14 +71,24 @@ router.post('/demo-login', async (req, res) => {
       return res.status(400).json({ msg: 'Rol demo inválido' });
     }
 
-    const demoEmail = role === 'admin'
-      ? 'demo_admin@pos.io'
-      : 'demo_seller@pos.io';
+    const demoData = {
+      admin: {
+        email: 'demo_admin@pos.io',
+        password: 'Admin123$',
+        name: 'Admin Demo',
+      },
+      seller: {
+        email: 'demo_seller@pos.io',
+        password: 'Seller123$',
+        name: 'Seller Demo',
+      },
+    };
 
-    const user = await User.findOne({ email: demoEmail });
+    const { email, password, name } = demoData[role];
+    let user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({ msg: 'Usuario demo no encontrado' });
+      user = await User.create({ name, email, password, role });
     }
 
     const token = jwt.sign(
