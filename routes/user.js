@@ -88,7 +88,15 @@ router.post('/demo-login', async (req, res) => {
     let user = await User.findOne({ email });
 
     if (!user) {
-      user = await User.create({ name, email, password, role });
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      user = await User.create({
+        name,
+        email,
+        password: hashedPassword,
+        role,
+      });
     }
 
     const token = jwt.sign(
