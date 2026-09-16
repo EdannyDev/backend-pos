@@ -94,7 +94,7 @@ cp .env.example .env
 | PORT | Port the server listens on | 5000 |
 | NODE_ENV | Environment mode | development |
 | FRONTEND_URL | Frontend origin (used for CORS & password reset links) | http://localhost:3000 |
-| MONGO_URI | MongoDB connection string | mongodb://localhost:27017/pixelpos |
+| MONGO_URI | MongoDB connection string | mongodb://localhost:27017/posDB |
 | JWT_SECRET | Secret key used to sign JWT tokens | your_jwt_secret_key |
 | RESEND_API_KEY | API key for the Resend email service | your_resend_api_key |
 | EMAIL_FROM | Verified sender address used for outgoing emails | onboarding@resend.dev |
@@ -115,4 +115,4 @@ The API will be available at `http://localhost:5000`.
 
 ---
 
-Frontend: [pos-app](https://github.com/EdannyDev/pos-app) · Author: [@EdannyDev](https://github.com/EdannyDev)
+Frontend: [pos-app](https://github.com/EdannyDev/frontend-pos) · Author: [@EdannyDev](https://github.com/EdannyDev)
