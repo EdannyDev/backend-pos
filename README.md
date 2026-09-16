@@ -1,6 +1,6 @@
 # 🕹️ PixelPOS – Backend API
 
-A RESTful API built with Node.js and Express, designed to handle point-of-sale operations with inventory control, sales processing and role-based access control. Consumed by the [PixelPOS Frontend](https://github.com/EdannyDev/pos-app).
+A RESTful API built with Node.js and Express, designed to handle point-of-sale operations with inventory control, sales processing and role-based access control. Consumed by the [PixelPOS Frontend](https://github.com/EdannyDev/frontend-pos).
 
 ## 📌 Overview
 
@@ -115,4 +115,4 @@ The API will be available at `http://localhost:5000`.
 
 ---
 
-Frontend: [pos-app](https://github.com/EdannyDev/frontend-pos) · Author: [@EdannyDev](https://github.com/EdannyDev)
+Frontend: [frontend-pos](https://github.com/EdannyDev/frontend-pos) · Author: [@EdannyDev](https://github.com/EdannyDev)
