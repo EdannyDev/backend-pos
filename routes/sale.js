@@ -38,10 +38,6 @@ router.post('/', validateCreateSale, handleValidation, verifyToken, async (req, 
       const product = await Product.findById(item.productId);
       if (!product) return res.status(404).json({ msg: `Producto no encontrado: ${item.productId}` });
 
-      if (item.quantity > product.stock) {
-        return res.status(400).json({ msg: `Stock insuficiente para: ${product.name}` });
-      }
-
       const subtotal = item.quantity * product.price;
       total += subtotal;
 
@@ -67,10 +63,29 @@ router.post('/', validateCreateSale, handleValidation, verifyToken, async (req, 
       }
     }
 
+    const updatedProducts = [];
+    let insufficientStockItem = null;
+
     for (const item of processedProducts) {
-      const product = await Product.findById(item.productId);
-      product.stock -= item.quantity;
-      await product.save();
+      const updated = await Product.findOneAndUpdate(
+        { _id: item.productId, stock: { $gte: item.quantity } },
+        { $inc: { stock: -item.quantity } },
+        { new: true }
+      );
+
+      if (!updated) {
+        insufficientStockItem = item;
+        break;
+      }
+      updatedProducts.push(updated);
+    }
+
+    if (insufficientStockItem) {
+      for (const updated of updatedProducts) {
+        const original = processedProducts.find(p => p.productId.equals(updated._id));
+        await Product.findByIdAndUpdate(updated._id, { $inc: { stock: original.quantity } });
+      }
+      return res.status(400).json({ msg: `Stock insuficiente para: ${insufficientStockItem.name}` });
     }
 
     const sale = new Sale({
@@ -82,18 +97,14 @@ router.post('/', validateCreateSale, handleValidation, verifyToken, async (req, 
 
     await sale.save();
 
-    const lowStockAlerts = [];
-    for (const item of processedProducts) {
-      const product = await Product.findById(item.productId);
-      if (product && product.stock <= 5) {
-        lowStockAlerts.push({
-          productId: product._id,
-          name: product.name,
-          stock: product.stock,
-          msg: `El stock del producto "${product.name}" es bajo: ${product.stock} unidades restantes`
-        });
-      }
-    }
+    const lowStockAlerts = updatedProducts
+      .filter(product => product.stock <= 5)
+      .map(product => ({
+        productId: product._id,
+        name: product.name,
+        stock: product.stock,
+        msg: `El stock del producto "${product.name}" es bajo: ${product.stock} unidades restantes`
+      }));
 
     res.status(201).json({
       msg: 'Venta registrada exitosamente',
