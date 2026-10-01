@@ -1,4 +1,4 @@
-const { body, validationResult } = require('express-validator');
+const { body, header, validationResult } = require('express-validator');
 
 const validateRegister = [
   body('name').trim().notEmpty().withMessage('El nombre es requerido'),
@@ -52,10 +52,25 @@ const validateUpdateProduct = [
   body('imageUrl').optional().isURL().withMessage('URL de imagen inválida'),
 ];
 
+const validateForgotPassword = [
+  body('email').isString().bail().isEmail().withMessage('Email inválido'),
+];
+
+const validateResetPassword = [
+  body('token').isString().bail().isLength({ min: 64, max: 64 }).withMessage('Token inválido'),
+  body('password').isString().bail()
+    .isLength({ min: 8, max: 72 }).withMessage('Debe tener entre 8 y 72 caracteres')
+    .matches(/[A-Z]/).withMessage('Debe incluir una mayúscula')
+    .matches(/[a-z]/).withMessage('Debe incluir una minúscula')
+    .matches(/\d/).withMessage('Debe incluir un número')
+    .matches(/[\W_]/).withMessage('Debe incluir un símbolo'),
+];
+
 const validateCreateSale = [
-  body('products').isArray({ min: 1 }).withMessage('Debes incluir al menos un producto'),
-  body('products.*.productId').notEmpty().withMessage('ID del producto requerido'),
-  body('products.*.quantity').isInt({ min: 1 }).withMessage('Cantidad inválida'),
+  header('idempotency-key').optional().isUUID().withMessage('Idempotency-Key inválida'),
+  body('products').isArray({ min: 1, max: 50 }).withMessage('Debes incluir entre 1 y 50 productos'),
+  body('products.*.productId').isMongoId().withMessage('ID de producto inválido'),
+  body('products.*.quantity').isInt({ min: 1, max: 10000 }).withMessage('Cantidad inválida').toInt(),
   body('paymentMethod')
     .isIn(['efectivo', 'tarjeta', 'transferencia'])
     .withMessage('Método de pago inválido'),
@@ -63,8 +78,8 @@ const validateCreateSale = [
 
 const validateUpdateSale = [
   body('products').optional().isArray({ min: 1 }).withMessage('Debes incluir al menos un producto'),
-  body('products.*.productId').optional().notEmpty().withMessage('ID del producto requerido'),
-  body('products.*.quantity').optional().isInt({ min: 1 }).withMessage('Cantidad inválida'),
+  body('products.*.productId').isMongoId().withMessage('ID de producto inválido'),
+  body('products.*.quantity').isInt({ min: 1, max: 10000 }).withMessage('Cantidad inválida').toInt(),
   body('paymentMethod').optional()
     .isIn(['efectivo', 'tarjeta', 'transferencia'])
     .withMessage('Método de pago inválido'),
@@ -86,6 +101,8 @@ module.exports = {
   validateLogin,
   validateUserUpdate,
   validateUpdateProfile,
+  validateForgotPassword,
+  validateResetPassword,
   validateCreateProduct,
   validateUpdateProduct,
   validateCreateSale,

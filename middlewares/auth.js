@@ -1,18 +1,25 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/user');
 
 // Middleware para rutas protegidas
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const token = req.cookies?.token;
 
   if (!token) return res.status(401).json({ msg: 'Acceso denegado. No token proporcionado.' });
 
+  let payload;
   try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = verified;
-    next();
+    payload = jwt.verify(token, process.env.JWT_SECRET);
   } catch (err) {
-    res.status(401).json({ msg: 'Token inválido o expirado' });
+    return res.status(401).json({ msg: 'Token inválido o expirado' });
   }
+
+  // El rol se lee de la base en cada request: un usuario eliminado o degradado pierde acceso de inmediato.
+  const user = await User.findById(payload.id).select('role').lean();
+  if (!user) return res.status(401).json({ msg: 'Sesión inválida' });
+
+  req.user = { id: String(user._id), role: user.role };
+  next();
 };
 
 // Middleware específico para rol admin

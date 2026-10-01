@@ -21,7 +21,7 @@ router.post('/', validateCreateProduct, handleValidation, verifyToken, isAdmin, 
     if (err.code === 11000) {
       return res.status(400).json({ msg: 'Ya existe un producto con ese nombre (único)' });
     }
-    res.status(500).json({ msg: 'Error al crear producto', error: err.message });
+    res.status(500).json({ msg: 'Error al crear producto' });
   }
 });
 
@@ -31,7 +31,7 @@ router.get('/', verifyToken, async (req, res) => {
     const products = await Product.find();
     res.json(products);
   } catch (err) {
-    res.status(500).json({ msg: 'Error al obtener productos', error: err.message });
+    res.status(500).json({ msg: 'Error al obtener productos' });
   }
 });
 
@@ -42,23 +42,30 @@ router.get('/:id', verifyToken, async (req, res) => {
     if (!product) return res.status(404).json({ msg: 'Producto no encontrado' });
     res.json(product);
   } catch (err) {
-    res.status(500).json({ msg: 'Error al obtener producto', error: err.message });
+    res.status(500).json({ msg: 'Error al obtener producto' });
   }
 });
 
 // Actualizar producto (solo admin)
 router.put('/:id', validateUpdateProduct, handleValidation, verifyToken, isAdmin, async (req, res) => {
   try {
-    const { name, description, category, price, stock, imageUrl } = req.body;
+    // Solo se actualizan los campos enviados (antes, omitir "name" rompía la ruta con un 500)
+    const update = {};
+    for (const field of ['name', 'description', 'category', 'price', 'stock', 'imageUrl']) {
+      if (req.body[field] !== undefined) update[field] = req.body[field];
+    }
 
-    const existingProduct = await Product.findOne({ name: name.trim(), _id: { $ne: req.params.id } });
-    if (existingProduct) {
-      return res.status(400).json({ msg: 'Ya existe otro producto con ese nombre' });
+    if (update.name) {
+      update.name = update.name.trim();
+      const existingProduct = await Product.findOne({ name: update.name, _id: { $ne: req.params.id } });
+      if (existingProduct) {
+        return res.status(400).json({ msg: 'Ya existe otro producto con ese nombre' });
+      }
     }
 
     const product = await Product.findByIdAndUpdate(
       req.params.id,
-      { name, description, category, price, stock, imageUrl },
+      { $set: update },
       { new: true, runValidators: true }
     );
     if (!product) return res.status(404).json({ msg: 'Producto no encontrado' });
@@ -67,7 +74,7 @@ router.put('/:id', validateUpdateProduct, handleValidation, verifyToken, isAdmin
     if (err.code === 11000) {
       return res.status(400).json({ msg: 'Ya existe un producto con ese nombre (único)' });
     }
-    res.status(500).json({ msg: 'Error al actualizar producto', error: err.message });
+    res.status(500).json({ msg: 'Error al actualizar producto' });
   }
 });
 
@@ -78,7 +85,7 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     if (!product) return res.status(404).json({ msg: 'Producto no encontrado' });
     res.json({ msg: 'Producto eliminado' });
   } catch (err) {
-    res.status(500).json({ msg: 'Error al eliminar producto', error: err.message });
+    res.status(500).json({ msg: 'Error al eliminar producto' });
   }
 });
 

@@ -17,7 +17,9 @@ const saleSchema = new mongoose.Schema({
   ],
   total: { type: Number, required: true },
   paymentMethod: { type: String, enum: ['efectivo', 'tarjeta', 'transferencia'], required: true },
-  status: { type: String, enum: ['completada', 'cancelada'], default: 'completada' }
+  status: { type: String, enum: ['completada', 'cancelada'], default: 'completada' },
+  idempotencyKey: { type: String, unique: true, sparse: true },
+  cancelledAt: { type: Date }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Sale', saleSchema);

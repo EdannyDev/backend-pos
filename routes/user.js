@@ -6,16 +6,19 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const { sendResetEmail } = require('../utils/resendMailer');
 const { verifyToken, isAdmin } = require('../middlewares/auth');
+const { authLimiter } = require('../middlewares/rateLimit');
 const { 
   validateRegister, 
   validateLogin, 
+  validateForgotPassword,
+  validateResetPassword,
   validateUserUpdate, 
   validateUpdateProfile, 
   handleValidation 
 } = require('../middlewares/validations');
 
 // Registro
-router.post('/register', validateRegister, handleValidation, async (req, res) => {
+router.post('/register', authLimiter, validateRegister, handleValidation, async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
@@ -29,12 +32,12 @@ router.post('/register', validateRegister, handleValidation, async (req, res) =>
 
     res.status(201).json({ msg: 'Usuario registrado correctamente', role: newUser.role });
   } catch (err) {
-    res.status(500).json({ msg: 'Error en el servidor', error: err.message });
+    res.status(500).json({ msg: 'Error en el servidor' });
   }
 });
 
 // Inicio de sesión
-router.post('/login', validateLogin, handleValidation, async (req, res) => {
+router.post('/login', authLimiter, validateLogin, handleValidation, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -58,7 +61,7 @@ router.post('/login', validateLogin, handleValidation, async (req, res) => {
 
     res.json({ role: user.role, name: user.name });
   } catch (err) {
-    res.status(500).json({ msg: 'Error en el servidor', error: err.message });
+    res.status(500).json({ msg: 'Error en el servidor' });
   }
 });
 
@@ -74,7 +77,7 @@ router.post('/logout', (req, res) => {
 });
 
 // Contraseña olvidada
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', authLimiter, validateForgotPassword, handleValidation, async (req, res) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
@@ -107,12 +110,12 @@ router.post('/forgot-password', async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ msg: 'Error del servidor', error: err.message });
+    res.status(500).json({ msg: 'Error del servidor' });
   }
 });
 
 // Restablecer contraseña
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', authLimiter, validateResetPassword, handleValidation, async (req, res) => {
   try {
     const { token, password } = req.body;
 
@@ -138,7 +141,7 @@ router.post('/reset-password', async (req, res) => {
 
     res.json({ msg: 'Contraseña actualizada correctamente' });
   } catch (err) {
-    res.status(500).json({ msg: 'Error del servidor', error: err.message });
+    res.status(500).json({ msg: 'Error del servidor' });
   }
 });
 
@@ -148,7 +151,7 @@ router.get('/list', verifyToken, isAdmin, async (req, res) => {
     const users = await User.find({ _id: { $ne: req.user.id } }).select('-password -passwordToken -passwordExpires');
     res.json(users);
   } catch (err) {
-    res.status(500).json({ msg: 'Error al obtener usuarios', error: err.message });
+    res.status(500).json({ msg: 'Error al obtener usuarios' });
   }
 });
 
@@ -164,7 +167,7 @@ router.get('/list/:id', verifyToken, isAdmin, async (req, res) => {
 
     res.json(user);
   } catch (err) {
-    res.status(500).json({ msg: 'Error al obtener usuario', error: err.message });
+    res.status(500).json({ msg: 'Error al obtener usuario' });
   }
 });
 
@@ -192,7 +195,7 @@ router.put('/update/:id', validateUserUpdate, handleValidation, verifyToken, isA
 
     res.json({ msg: 'Usuario actualizado correctamente' });
   } catch (err) {
-    res.status(500).json({ msg: 'Error al actualizar usuario', error: err.message });
+    res.status(500).json({ msg: 'Error al actualizar usuario' });
   }
 });
 
@@ -208,7 +211,7 @@ router.delete('/delete/:id', verifyToken, isAdmin, async (req, res) => {
 
     res.json({ msg: 'Usuario eliminado correctamente' });
   } catch (err) {
-    res.status(500).json({ msg: 'Error al eliminar usuario', error: err.message });
+    res.status(500).json({ msg: 'Error al eliminar usuario' });
   }
 });
 
@@ -220,7 +223,7 @@ router.get('/me', verifyToken, async (req, res) => {
 
     res.json(user);
   } catch (err) {
-    res.status(500).json({ msg: 'Error al obtener perfil', error: err.message });
+    res.status(500).json({ msg: 'Error al obtener perfil' });
   }
 });
 
@@ -236,7 +239,7 @@ router.get('/profile/:id', verifyToken, async (req, res) => {
 
     res.json(user);
   } catch (err) {
-    res.status(500).json({ msg: 'Error al obtener perfil', error: err.message });
+    res.status(500).json({ msg: 'Error al obtener perfil' });
   }
 });
 
@@ -262,7 +265,7 @@ router.put('/profile/:id', validateUpdateProfile, handleValidation, verifyToken,
     await user.save();
     res.json({ msg: 'Perfil actualizado correctamente' });
   } catch (err) {
-    res.status(500).json({ msg: 'Error al actualizar perfil', error: err.message });
+    res.status(500).json({ msg: 'Error al actualizar perfil' });
   }
 });
 
@@ -273,10 +276,15 @@ router.delete('/profile/:id', verifyToken, async (req, res) => {
       return res.status(403).json({ msg: 'No puedes eliminar la cuenta de otro usuario' });
     }
 
+    const me = await User.findById(req.user.id).select('role');
+    if (me?.role === 'admin' && (await User.countDocuments({ role: 'admin' })) <= 1) {
+      return res.status(400).json({ msg: 'Eres el único administrador. Asigna otro antes de eliminar tu cuenta' });
+    }
+
     await User.findByIdAndDelete(req.user.id);
     res.json({ msg: 'Cuenta eliminada correctamente' });
   } catch (err) {
-    res.status(500).json({ msg: 'Error al eliminar cuenta', error: err.message });
+    res.status(500).json({ msg: 'Error al eliminar cuenta' });
   }
 });
 

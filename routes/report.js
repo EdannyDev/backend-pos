@@ -8,7 +8,7 @@ router.get('/daily-sales', verifyToken, isAdmin, async (req, res) => {
   try {
     const dailySales = await Sale.aggregate([
       {
-        $match: { createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }
+        $match: { status: 'completada', createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }
       },
       {
         $group: {
@@ -22,7 +22,7 @@ router.get('/daily-sales', verifyToken, isAdmin, async (req, res) => {
 
     res.json(dailySales);
   } catch (err) {
-    res.status(500).json({ msg: 'Error al obtener ventas diarias', error: err.message });
+    res.status(500).json({ msg: 'Error al obtener ventas diarias' });
   }
 });
 
@@ -31,7 +31,7 @@ router.get('/monthly-sales', verifyToken, isAdmin, async (req, res) => {
   try {
     const monthlySales = await Sale.aggregate([
       {
-        $match: { createdAt: { $gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) } }
+        $match: { status: 'completada', createdAt: { $gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) } }
       },
       {
         $group: {
@@ -45,7 +45,7 @@ router.get('/monthly-sales', verifyToken, isAdmin, async (req, res) => {
 
     res.json(monthlySales);
   } catch (err) {
-    res.status(500).json({ msg: 'Error al obtener ventas mensuales', error: err.message });
+    res.status(500).json({ msg: 'Error al obtener ventas mensuales' });
   }
 });
 
@@ -53,6 +53,7 @@ router.get('/monthly-sales', verifyToken, isAdmin, async (req, res) => {
 router.get('/user-sales', verifyToken, isAdmin, async (req, res) => {
   try {
     const userSales = await Sale.aggregate([
+      { $match: { status: 'completada' } },
       {
         $group: {
           _id: "$seller",
@@ -68,12 +69,12 @@ router.get('/user-sales', verifyToken, isAdmin, async (req, res) => {
           as: "user"
         }
       },
-      { $unwind: "$user" },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
       {
         $project: {
           _id: 0,
-          name: "$user.name",
-          email: "$user.email",
+          name: { $ifNull: ["$user.name", "Usuario eliminado"] },
+          email: { $ifNull: ["$user.email", "—"] },
           total: 1,
           count: 1
         }
@@ -83,7 +84,7 @@ router.get('/user-sales', verifyToken, isAdmin, async (req, res) => {
 
     res.json(userSales);
   } catch (err) {
-    res.status(500).json({ msg: 'Error al obtener ventas por usuario', error: err.message });
+    res.status(500).json({ msg: 'Error al obtener ventas por usuario' });
   }
 });
 
@@ -91,27 +92,20 @@ router.get('/user-sales', verifyToken, isAdmin, async (req, res) => {
 router.get('/top-products', verifyToken, isAdmin, async (req, res) => {
   try {
     const topProducts = await Sale.aggregate([
+      { $match: { status: 'completada' } },
       { $unwind: "$products" },
       {
         $group: {
           _id: "$products.productId",
+          name: { $last: "$products.name" },
           quantitySold: { $sum: "$products.quantity" },
           total: { $sum: "$products.subtotal" }
         }
       },
       {
-        $lookup: {
-          from: "products",
-          localField: "_id",
-          foreignField: "_id",
-          as: "product"
-        }
-      },
-      { $unwind: "$product" },
-      {
         $project: {
           _id: 0,
-          name: "$product.name",
+          name: 1,
           quantitySold: 1,
           total: 1
         }
@@ -122,7 +116,7 @@ router.get('/top-products', verifyToken, isAdmin, async (req, res) => {
 
     res.json(topProducts);
   } catch (err) {
-    res.status(500).json({ msg: 'Error al obtener productos más vendidos', error: err.message });
+    res.status(500).json({ msg: 'Error al obtener productos más vendidos' });
   }
 });
 
@@ -130,6 +124,7 @@ router.get('/top-products', verifyToken, isAdmin, async (req, res) => {
 router.get('/total-income', verifyToken, isAdmin, async (req, res) => {
   try {
     const income = await Sale.aggregate([
+      { $match: { status: 'completada' } },
       {
         $group: {
           _id: null,
@@ -140,7 +135,7 @@ router.get('/total-income', verifyToken, isAdmin, async (req, res) => {
 
     res.json({ total: income[0]?.total || 0 });
   } catch (err) {
-    res.status(500).json({ msg: 'Error al obtener ingresos totales', error: err.message });
+    res.status(500).json({ msg: 'Error al obtener ingresos totales' });
   }
 });
 

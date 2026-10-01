@@ -6,7 +6,7 @@ A RESTful API built with Node.js and Express, designed to handle point-of-sale o
 
 PixelPOS Backend is a RESTful API designed to manage inventory, sales and user roles for a point-of-sale system.
 
-It enforces stock consistency, duplicate-sale prevention and secure role-based access control. One engineering decision worth calling out: before creating a sale, the system checks if the same seller submitted an identical sale (same products and quantities) within a 5-minute window, to catch accidental duplicate submissions without blocking legitimate fast consecutive sales.
+It enforces stock consistency and role-based access control. Stock is decremented with one atomic conditional update per product (`stock >= quantity` and `$inc` in the same query), so concurrent sales cannot oversell. Accidental double submissions are handled with an `Idempotency-Key` header: retrying the same request returns the original sale instead of creating another one.
 
 ## 🏗 Architecture
 
@@ -37,7 +37,7 @@ This structure keeps responsibilities separated and makes the project easier to 
 
 **Seller**
 - Register sales
-- Limited system access
+- View only their own sales
 
 Access restrictions are enforced through middleware validation.
 
@@ -49,7 +49,7 @@ Transactional emails (password reset) are sent via Resend. Configure `RESEND_API
 
 - Authentication System
 - Inventory Management
-- Sales Processing (with stock validation & duplicate-sale prevention)
+- Sales Processing (atomic stock control, idempotent creation, cancellation with stock reversal)
 - Low Stock Alerts
 - Reports & Metrics (aggregation pipelines)
 - Password Recovery via Email
@@ -65,6 +65,17 @@ Transactional emails (password reset) are sent via Resend. Configure `RESEND_API
 | Validation | express-validator |
 | Email | Resend |
 | Configuration | dotenv |
+
+## ⚠️ Known Limitations
+
+- No MongoDB transactions: stock and sale writes are separate operations with compensation on failure. A process crash between them can leave stock decremented without a sale.
+- `PUT /api/products/:id` sets `stock` to an absolute value and can overwrite a concurrent sale's decrement.
+- Registration is open: anyone can create a seller account. The first admin is promoted manually in the database.
+- No automated test suite. `scripts/concurrency.test.js` is a manual integrity check against a running instance (development database only).
+- Sales list is capped at 500 with no server-side pagination.
+- Money is stored as floating-point numbers rounded to 2 decimals.
+- A password change does not invalidate existing sessions (role and account existence are checked on every request).
+- No payment processing or cash-register closing.
 
 ## ⚙️ Getting Started
 
@@ -112,6 +123,7 @@ The API will be available at `http://localhost:5000`.
 | Script | Description |
 |---|---|
 | `npm start` | Starts the server |
+| `npm run test:concurrency` | Runs the sales integrity check (needs `ADMIN_EMAIL` and `ADMIN_PASSWORD`, optional `API_URL`) |
 
 ---
 
